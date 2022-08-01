@@ -83,62 +83,45 @@ app.get('/account/client/', (req, res) => {
 });
 
 app.get('/account/client/:id', checkExistClient, (req, res) => {
-  const client = customers.find((customer) => customer.id === req.params.id);
-  return res.send(client);
+  return res.send(customers.find((customer) => customer.id === req.params.id));
 });
 
-app.get('/account/client/extract/:id', (req, res) => {
-  const client = checkExistClient(customers, req.params.id);
-  const extract = customers.find((customer) => {
-    return customer.cpf === client.cpf;
+app.get('/account/client/extract/:id', checkExistClient, (req, res) => {
+  const client = customers.find((customer) => {
+    return customer.id === req.params.id;
   });
-  if (extract) {
-    return res.send(extract.extrato);
-  } else {
-    return res.send('Usuário não encontrado');
-  }
+  return res.send(client.extrato);
 });
 
-app.get('/account/client/extract/:id/:date', (req, res) => {
-  const client = checkExistClient(customers, req.params.id);
-  for (let i = 0; i < customers.length; i++) {
-    if (customers[i].id == client.id) {
-      for (let j = 0; j < customers.extrato.length; j++) {
-        if (customers.extrato[j].time == req.params.date) {
-          return res.send(customers.extrato[j]);
-        }
-      }
-      return res.send('Data não encontrada');
+app.get('/account/client/extract/:id/:date', checkExistClient, (req, res) => {
+  const client = customers.find((customer) => customer.id === req.params.id);
+  for (let i = 0; i < client.extrato.length; i++) {
+    if (client.extrato[i].time == req.params.date) {
+      return res.send(client.extrato[i]);
     }
-    return res.send('Cliente não encontrado');
   }
+  return res.send('Data não encontrada');
 });
 
-app.put('/account/client/change/:id', (req, res) => {
-  for (let i = 0; i < customers.length; i++) {
-    if (customers[i].id == req.params.id) {
-      if (req.body.change == 'name' && req.body.newName != '') {
-        customers[i].name = req.body.newName;
-        return res.send('Nome alterado com sucesso');
-      } else if (req.body.change == 'cpf' && req.body.newCpf != '') {
-        customers[i].name = req.body.newCpf;
-        return res.send('CPF alterado com sucesso');
-      } else {
-        return res.send(
-          'Por favor, definir o que será alterado, e certificar do valor correto!'
-        );
-      }
-    }
-    return res.send('Usuário não encontrado');
+app.put('/account/client/change/:id', checkExistClient, (req, res) => {
+  const client = customers.find((customer) => customer.id === req.params.id);
+  if (req.body.change == 'name' && req.body.newName != '') {
+    client.name = req.body.newName;
+    return res.send('Nome alterado com sucesso!');
   }
+  if (req.body.change == 'cpf' && req.body.newCpf != '') {
+    client.name = req.body.newCpf;
+    return res.send('CPF alterado com sucesso!');
+  }
+  return res.send('Por favor defina o que será alterado!');
 });
 
-app.delete('/account/client/delete/:id', (req, res) => {
-  if (checkExistClient(customers, req.params.id)) {
-    customers.splice(checkExistClient(customers, req.params.id), 1);
-    return res.send('Usuário apagado com sucesos.');
-  }
-  return res.send('Usuário não encontrado');
+app.delete('/account/client/delete/:id', checkExistClient, (req, res) => {
+  customers.splice(
+    customers.find((customer) => customer.id === req.params.id),
+    1
+  );
+  return res.send('Usuário apagado com sucesso.');
 });
 
 module.exports = app;
