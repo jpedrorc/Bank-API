@@ -107,8 +107,7 @@ app.get('/account/client/', (req, res) => {
 
 //GET ESPECIFIC CUSTOMER
 app.get('/account/client/:id', checkExistClient, (req, res) => {
-  const client = customers.find((customer) => customer.id === req.params.id);
-  return res.send(client);
+  return res.send(customers.find((customer) => customer.id === req.params.id));
 });
 
 //GET EXTRACT OF ESPECIFIC CUSTOMER
@@ -136,8 +135,8 @@ app.get('/account/client/extract/:id/:date', (req, res) => {
       }
       return res.send('Data não encontrada');
     }
-    return res.send('Cliente não encontrado');
   }
+  return res.send('Data não encontrada');
 });
 
 //CHANGE CUSTOMER INFOS
@@ -158,6 +157,11 @@ app.put('/account/client/change/:id', (req, res) => {
     }
     return res.send('Usuário não encontrado');
   }
+  if (req.body.change == 'cpf' && req.body.newCpf != '') {
+    client.name = req.body.newCpf;
+    return res.send('CPF alterado com sucesso!');
+  }
+  return res.send('Por favor defina o que será alterado!');
 });
 
 //DELETE CUSTOMER
