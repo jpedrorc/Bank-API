@@ -1,2 +1,4 @@
 const app = require('./');
-app.listen(3333);
+const newExtract = {};
+console.log('App funcionando na porta 3000');
+app.listen(3000);
