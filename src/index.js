@@ -33,13 +33,18 @@ function customerAlreadyExist(req, res, next) {
 }
 
 function checkExistClient(req, res, next) {
-  const client = customers.find((customer) => [customer.id === req.params.id]);
-  console.log(client);
+  if (!req.headers.cpf) {
+    res.send('Please enter a cpf');
+  }
+  const client = customers.find((customer) => [
+    customer.cpf === req.headers.cpf,
+  ]);
   if (!client) {
     return res.send(`User "${req.params.id}" not found`);
   }
   next();
 }
+
 //CREATE CUSTOMER
 app.post('/account/client/create', customerAlreadyExist, (req, res) => {
   const { cpf, name } = req.body;
@@ -53,21 +58,17 @@ app.post('/account/client/create', customerAlreadyExist, (req, res) => {
 
 //DEPOSIT
 app.post(
-  '/account/client/transaction/deposit/:id',
+  '/account/client/transaction/deposit',
   checkExistClient,
   (req, res) => {
-    const client = customers.find((customer) => [
-      customer.id === req.params.id,
-    ]);
     if (req.body.value == 0 || !req.body.value) {
       res.send('Please, enter the amount to be deposited.');
     }
     newExtract = { time, transacao: `+${req.body.value}` };
-    client.balance += req.body.value;
-    client.extract.push(newExtract);
     for (let i = 0; i < customers.length; i++) {
-      if (customers[i].id == client.id) {
-        customers[i] = client;
+      if (customers[i].cpf == req.headers.cpf) {
+        customers[i].balance += req.body.value;
+        customers[i].extract.push(newExtract);
       }
     }
     res.status(200).send('Successful deposit');
@@ -76,24 +77,20 @@ app.post(
 
 //WITHDRAWAL
 app.post(
-  '/account/client/transaction/withdraw/:id',
+  '/account/client/transaction/withdraw',
   checkExistClient,
   (req, res) => {
-    const client = customers.find((customer) => [
-      customer.id === req.params.id,
-    ]);
     if (req.body.value == 0 || !req.body.value) {
       res.send('Please, enter the amount to be withdrawal.');
     }
-    if (client.balance > req.body.value) {
-      res.status(400).send('Insufficient funds');
-    }
     newExtract = { time, transacao: `-${req.body.value}` };
-    client.balance -= req.body.value;
-    client.extract.push(newExtract);
     for (let i = 0; i < customers.length; i++) {
-      if (customers[i].id == client.id) {
-        customers[i] = client;
+      if (customers[i].cpf == req.headers.cpf) {
+        if (customers[i].balance < req.body.value) {
+          res.status(400).send('Insufficient funds');
+        }
+        customers[i].balance -= req.body.value;
+        customers[i].extract.push(newExtract);
       }
     }
     res.status(200).send('Successful withdrawal');
@@ -106,13 +103,14 @@ app.get('/account/client/', (req, res) => {
 });
 
 //GET ESPECIFIC CUSTOMER
-app.get('/account/client/:id', checkExistClient, (req, res) => {
-  return res.send(customers.find((customer) => customer.id === req.params.id));
+app.get('/account/client', checkExistClient, (req, res) => {
+  return res.send(
+    customers.find((customer) => customer.cpf === req.headers.cpf)
+  );
 });
 
 //GET EXTRACT OF ESPECIFIC CUSTOMER
-app.get('/account/client/extract/:id', (req, res) => {
-  const client = checkExistClient(customers, req.params.id);
+app.get('/account/client/extract', checkExistClient, (req, res) => {
   const extract = customers.find((customer) => {
     return customer.cpf === client.cpf;
   });
@@ -124,53 +122,46 @@ app.get('/account/client/extract/:id', (req, res) => {
 });
 
 //GET EXTRACT OF ESPECIFIC TIME OF A CUSTOMER
-app.get('/account/client/extract/:id/:date', (req, res) => {
-  const client = checkExistClient(customers, req.params.id);
+app.get('/account/client/extract', checkExistClient, (req, res) => {
   for (let i = 0; i < customers.length; i++) {
-    if (customers[i].id == client.id) {
+    if (customers[i].cpf == req.headers.cpf) {
       for (let j = 0; j < customers.extract.length; j++) {
-        if (customers.extract[j].time == req.params.date) {
+        if (customers.extract[j].time == req.headers.date) {
           return res.send(customers.extract[j]);
         }
       }
-      return res.send('Data não encontrada');
+      return res.send('Date not found');
     }
   }
-  return res.send('Data não encontrada');
 });
 
 //CHANGE CUSTOMER INFOS
-app.put('/account/client/change/:id', (req, res) => {
+app.put('/account/client/change/name', checkExistClient, (req, res) => {
   for (let i = 0; i < customers.length; i++) {
-    if (customers[i].id == req.params.id) {
-      if (req.body.change == 'name' && req.body.newName != '') {
-        customers[i].name = req.body.newName;
-        return res.send('Nome alterado com sucesso');
-      } else if (req.body.change == 'cpf' && req.body.newCpf != '') {
-        customers[i].name = req.body.newCpf;
-        return res.send('CPF alterado com sucesso');
-      } else {
-        return res.send(
-          'Por favor, definir o que será alterado, e certificar do value correto!'
-        );
-      }
+    if (customers[i].cpf == req.headers.cpf) {
+      customers[i].name = req.body.newName;
+      return res.send('Nome alterado com sucesso');
     }
-    return res.send('Usuário não encontrado');
   }
-  if (req.body.change == 'cpf' && req.body.newCpf != '') {
-    client.name = req.body.newCpf;
-    return res.send('CPF alterado com sucesso!');
+});
+
+app.put('/account/client/change/cpf', (req, res) => {
+  for (let i = 0; i < customers.length; i++) {
+    if (customers[i].cpf == req.headers.cpf) {
+      customers[i].cpf = req.body.newCpf;
+      return res.send('CPF alterado com sucesso!');
+    }
   }
-  return res.send('Por favor defina o que será alterado!');
 });
 
 //DELETE CUSTOMER
-app.delete('/account/client/delete/:id', (req, res) => {
-  if (checkExistClient(customers, req.params.id)) {
-    customers.splice(checkExistClient(customers, req.params.id), 1);
-    return res.send('Usuário apagado com sucesos.');
+app.delete('/account/client/delete', checkExistClient, (req, res) => {
+  for (let i = 0; i < customers.length; i++) {
+    if (customers[i] === req.headers.cpf) {
+      customers.splice(i, 1);
+      return res.status(200).send('Usuário apagado com sucesso.');
+    }
   }
-  return res.send('Usuário não encontrado');
 });
 
 module.exports = app;
