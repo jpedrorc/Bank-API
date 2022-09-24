@@ -13,12 +13,14 @@ app.use(express.json());
 
 function customerAlreadyExist(req, res, next) {
   if (!req.body) {
-    return res.send('Por favor, insira um cpf e um nome para cadastro!');
+    return res
+      .status(400)
+      .send('Please, enter a cpf and a name for registration');
   } else if (!req.body.cpf || !req.body.name) {
-    return res.send('Por favor, insira o cpf e o nome corretamente!');
+    return res.status(400).send('Please enter a correctly cpf and name');
   }
   if (!checkCPF(req.body.cpf)) {
-    return res.status(400).send('Por favor, insira um cpf válido');
+    return res.status(400).send('Please, enter a valid cpf');
   }
   if (
     (customerAlreadyExist = customers.some(
@@ -53,7 +55,7 @@ app.post('/account/client/create', customerAlreadyExist, (req, res) => {
 
   customers.push({ cpf, name, id: uuidv4(), balance: 0, extract });
 
-  return res.status(201).send('Usuário criado com sucesso!');
+  return res.status(201).send('User created successfully');
 });
 
 //DEPOSIT
@@ -62,7 +64,7 @@ app.post(
   checkExistClient,
   (req, res) => {
     if (req.body.value == 0 || !req.body.value) {
-      res.send('Please, enter the amount to be deposited.');
+      res.status(400).send('Please, enter the amount to be deposited.');
     }
     newExtract = { time, transacao: `+${req.body.value}` };
     for (let i = 0; i < customers.length; i++) {
@@ -99,14 +101,14 @@ app.post(
 
 // GET CUSTOMERS
 app.get('/account/client/', (req, res) => {
-  return res.send(customers);
+  return res.status(200).send(customers);
 });
 
 //GET ESPECIFIC CUSTOMER
 app.get('/account/client', checkExistClient, (req, res) => {
-  return res.send(
-    customers.find((customer) => customer.cpf === req.headers.cpf)
-  );
+  return res
+    .status(200)
+    .send(customers.find((customer) => customer.cpf === req.headers.cpf));
 });
 
 //GET EXTRACT OF ESPECIFIC CUSTOMER
@@ -114,11 +116,7 @@ app.get('/account/client/extract', checkExistClient, (req, res) => {
   const extract = customers.find((customer) => {
     return customer.cpf === client.cpf;
   });
-  if (extract) {
-    return res.send(extract.extract);
-  } else {
-    return res.send('Usuário não encontrado');
-  }
+  return res.status(200).send(extract.extract);
 });
 
 //GET EXTRACT OF ESPECIFIC TIME OF A CUSTOMER
@@ -127,10 +125,10 @@ app.get('/account/client/extract', checkExistClient, (req, res) => {
     if (customers[i].cpf == req.headers.cpf) {
       for (let j = 0; j < customers.extract.length; j++) {
         if (customers.extract[j].time == req.headers.date) {
-          return res.send(customers.extract[j]);
+          return res.status(200).send(customers.extract[j]);
         }
       }
-      return res.send('Date not found');
+      return res.status(204).send('Date not found');
     }
   }
 });
@@ -140,7 +138,7 @@ app.put('/account/client/change/name', checkExistClient, (req, res) => {
   for (let i = 0; i < customers.length; i++) {
     if (customers[i].cpf == req.headers.cpf) {
       customers[i].name = req.body.newName;
-      return res.send('Nome alterado com sucesso');
+      return res.status(200).send('Name changed successfully');
     }
   }
 });
@@ -149,7 +147,7 @@ app.put('/account/client/change/cpf', (req, res) => {
   for (let i = 0; i < customers.length; i++) {
     if (customers[i].cpf == req.headers.cpf) {
       customers[i].cpf = req.body.newCpf;
-      return res.send('CPF alterado com sucesso!');
+      return res.status(200).send('CPF changed successfully');
     }
   }
 });
@@ -159,7 +157,7 @@ app.delete('/account/client/delete', checkExistClient, (req, res) => {
   for (let i = 0; i < customers.length; i++) {
     if (customers[i] === req.headers.cpf) {
       customers.splice(i, 1);
-      return res.status(200).send('Usuário apagado com sucesso.');
+      return res.status(200).send('User deleted successfully.');
     }
   }
 });
